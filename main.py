@@ -40,7 +40,7 @@ def acessarSite():
     navegador.find_element(By.ID, 'ddlTipoAcesso')
     navegador.find_element(By.ID, 'txtLogin').send_keys(login)
     navegador.find_element(By.ID, 'txtSenha').send_keys(senha)
-    print(navegador.page_source);
+    print(navegador.page_source)
 
     geraImagemCaptchaLogin(navegador)
     captcha_text = retornaValorCaptcha('imagelogin.png')
