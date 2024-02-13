@@ -1,0 +1,1 @@
+from Repository.ConvenioRepository import *

@@ -14,10 +14,16 @@ from identificadores import *
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from tkinter import *
+import tkinter as tk
+from tkinter import PhotoImage, messagebox
 from tkcalendar import *
 import pandas as pd
 import datetime
 from datetime import date
+import os
+
+from Service.LoginService import *
+from Service.TipoLoginService import *
 
 navegador = None
 
@@ -298,22 +304,32 @@ def abrirJanela():
     cpa_vars = []
     checkbuttons_convenio = []
     checkbuttons_cpa = []
+    selectConvenio = []
+    selectcpa = []
+    selectlocaiscpa = []
     # Função de callback para checkboxes de Convênio e CPA
     def on_checkbox_click(i, is_convenio):
         if is_convenio:
             if convenio_vars[i].get() == 1:
                 cpa_vars[i].set(0)  # Desativa a checkbox de CPA
                 checkbuttons_cpa[i].config(state='disabled')
+                selectcpa[i].config(state='disabled')
+                selectlocaiscpa[i].config(state='disabled')
                 variable_cpa[i].set(OPTIONS_CPA[0])  # Reseta o OptionMenu de CPA
             else:
                 checkbuttons_cpa[i].config(state='normal')  # Ativa a checkbox de CPA
+                selectcpa[i].config(state='normal')
         else:
             if cpa_vars[i].get() == 1:
                 convenio_vars[i].set(0)  # Desativa a checkbox de Convênio
                 checkbuttons_convenio[i].config(state='disabled')
+                selectConvenio[i].config(state='disabled')
+                selectlocaiscpa[i].config(state='normal')
                 variable_convenio[i].set(OPTIONS_CONVENIO[0])  # Reseta o OptionMenu de Convênio
             else:
                 checkbuttons_convenio[i].config(state='normal')  # Ativa a checkbox de Convênio
+                selectConvenio[i].config(state='normal')
+                selectlocaiscpa[i].config(state='disabled')
 
     def btn_abrir_site_click():
         for i in range(7):
@@ -339,39 +355,60 @@ def abrirJanela():
         # validaInformacoes(tipoFiltro, localServico, data_servico, hora_servico, setor_servico)
         acessarSite()
 
+    def update_locais(texto, i):
+        # selected_cpa = variable_cpa[index].get()
+        index = OPTIONS_CPA.index(texto)
+        locais_options = OPTIONS_LOCAISXCPA.get(texto, [])
+        w_locaiscpa[0].set(locais_options[0] if locais_options else "Selecione um local")
+        w_locaiscpa[0]['menu'].delete(0, 'end')
+        for local in locais_options:
+            w_locaiscpa[0]['menu'].add_command(label=local, command=lambda l=local: variable_locaisxcpa[index].set(l))
+
     convenio_vars = []
     cpa_vars = []
     variable_convenio = []
     variable_cpa = []
+    variable_locaisxcpa = []
     variable_data = []
     variable_vaga = []
     variable_horario = []
+    w_locaiscpa = []
 
     for i in range(7):
         convenio_vars.append(IntVar())
         convenio_check = Checkbutton(janela, text='Convênio:', onvalue=1, offvalue=0, variable=convenio_vars[i])
         convenio_check.grid(column=column, row=row, padx=5, pady=5)
         checkbuttons_convenio.append(convenio_check)
-        convenio_check.config(command=lambda i=i: on_checkbox_click(i, True))
+        convenio_check.config(command=lambda index=i: on_checkbox_click(index, True))
         column += 1
 
         variable_convenio.append(StringVar(janela))
         variable_convenio[i].set(OPTIONS_CONVENIO[0])
         w_convenio = OptionMenu(janela, variable_convenio[i], *OPTIONS_CONVENIO)
         w_convenio.grid(column=column, row=row, padx=5, pady=5)
+        selectConvenio.append(w_convenio)
         column += 1
 
         cpa_vars.append(IntVar())
         cpa_check = Checkbutton(janela, text='CPA: ', onvalue=1, offvalue=0, variable=cpa_vars[i])
         cpa_check.grid(column=column, row=row, padx=5, pady=5)
         checkbuttons_cpa.append(cpa_check)
-        cpa_check.config(command=lambda i=i: on_checkbox_click(i, False))
+        cpa_check.config(command=lambda index=i: on_checkbox_click(index, False))
         column += 1
 
         variable_cpa.append(StringVar(janela))
         variable_cpa[i].set(OPTIONS_CPA[0])
-        w_cpa = OptionMenu(janela, variable_cpa[i], *OPTIONS_CPA)
+        w_cpa = OptionMenu(janela, variable_cpa[i], *OPTIONS_CPA, command=lambda idx=i: update_locais(idx, i))
         w_cpa.grid(column=column, row=row, padx=5, pady=5)
+        selectcpa.append(w_cpa)
+        column += 1
+
+        variable_locaisxcpa.append(StringVar(janela))
+        variable_locaisxcpa[i].set(OPTIONS_CPA[0])
+        w_locaiscpa = OptionMenu(janela, variable_locaisxcpa[i], "")
+        w_locaiscpa.config(state='disabled')
+        w_locaiscpa.grid(column=column, row=row, padx=5, pady=5)
+        selectlocaiscpa.append(w_locaiscpa)
         column += 1
 
         variable_data.append(StringVar(janela))
@@ -399,7 +436,222 @@ def abrirJanela():
     btn_abrir_siste.grid(column=0, row=row, padx=10, pady=10)
     janela.mainloop()
 
+def on_button_click(button_name):
+    if button_name == "Login":
+        create_login_window()
+def abrirJanela2():
+
+
+    # Criar janela principal
+    root = tk.Tk()
+    root.title("Proeis")
+
+    # Configurar ícone da janela
+    script_directory = os.path.dirname(os.path.realpath(__file__))
+    icon_path = os.path.join(script_directory, "imagens", "icones", "logo_CPROEIS_PMERJ.ico")  # Substitua "subpasta" e "icone.ico" conforme necessário
+    root.iconbitmap(default=icon_path)
+
+
+
+    # Função para criar botões com imagem e nome
+    def create_button(image_path, button_name):
+        image = PhotoImage(file=image_path).subsample(2, 2)  # Ajuste a escala conforme necessário
+        button = tk.Button(root, image=image, text=button_name, compound=tk.TOP, font=('Arial', 12),
+                           command=lambda: on_button_click(button_name))
+        button.image = image
+        return button
+
+    # Obtém o diretório atual do script
+    script_directory = os.path.dirname(os.path.realpath(__file__))
+    # Lista de imagens e nomes
+    button_data = [
+        {"image_path": os.path.join(script_directory, "imagens", "login.png"), "name": "Login"},
+        {"image_path": os.path.join(script_directory, "imagens", "convenio.png"), "name": "Convênio"},
+        {"image_path": os.path.join(script_directory, "imagens", "marcacao.png"), "name": "Marcação"},
+        {"image_path": os.path.join(script_directory, "imagens", "setor_servico.png"), "name": "Setor de Serviço"},
+        {"image_path": os.path.join(script_directory, "imagens", "unidade.png"), "name": "Unidade"},
+        {"image_path": os.path.join(script_directory, "imagens", "unidade_convenio.png"), "name": "Unidade Convênio"}
+    ]
+
+    # Criar e posicionar os botões
+    row = 0
+    col = 0
+    for data in button_data:
+        button = create_button(data["image_path"], data["name"])
+        button.grid(row=row, column=col, padx=10, pady=10)
+        col += 1
+        if col > 2:
+            col = 0
+            row += 1
+
+    # Configurar o crescimento das colunas e linhas para preencher uniformemente o espaço
+    for i in range(3):  # Número de colunas
+        root.grid_columnconfigure(i, weight=1)
+
+    for i in range(2):  # Número de linhas
+        root.grid_rowconfigure(i, weight=1)
+
+    root.state('zoomed')  # Inicia a tela maximinada
+
+    # # Obter informações sobre as dimensões da tela
+    # monitors = get_monitors()
+    # screen_width = monitors[0].width
+    # screen_height = monitors[0].height
+    #
+    # # Configurar janela para abrir em tela cheia
+    # root.geometry(f"{screen_width}x{screen_height}+0+0")  # Ajustar a geometria da janela para ocupar toda a tela
+
+    # Iniciar o loop da interface gráfica
+    root.mainloop()
+
+def create_login_window():
+    root2 = tk.Tk()
+    root2.title("Cadastra login")
+
+    # Obtém os tipos de login do banco de dados
+    login_types = [(0, "SELECIONE UMA OPÇÃO")] + retornaTipoLogin()
+
+    # Use uma lista de rótulos para preencher o OptionMenu
+    login_type_options = [label for _, label in login_types]
+
+
+    # Adicione elementos à nova janela
+    tk.Label(root2, text="Tipo de Login:").grid(row=0, column=0, padx=10, pady=10)
+    login_type_var = tk.StringVar(root2)
+    login_type_var.set(login_type_options[0])  # Defina o valor padrão
+    login_type_menu = tk.OptionMenu(root2, login_type_var, *login_type_options)
+    login_type_menu.grid(row=0, column=1, padx=10, pady=10)
+
+    # Associa a função atualizar_max_length ao evento de modificação do OptionMenu
+    login_type_var.trace_add('write', lambda *args: atualizar_max_length())
+
+    tk.Label(root2, text="Usuário:").grid(row=1, column=0, padx=10, pady=10)
+    username_entry = tk.Entry(root2)
+    username_entry.grid(row=1, column=1, padx=10, pady=10)
+
+    tk.Label(root2, text="Senha:").grid(row=2, column=0, padx=10, pady=10)
+    password_entry = tk.Entry(root2, show="*")
+    password_entry.grid(row=2, column=1, padx=10, pady=10)
+
+    save_button = tk.Button(root2, text="Salvar", command=lambda: validar_formulario())
+    save_button.grid(row=3, column=1, padx=10, pady=10)
+
+    cancel_button = tk.Button(root2, text="Cancelar", command=root2.destroy)
+    cancel_button.grid(row=3, column=0, padx=10, pady=10)
+
+    username_entry.config(state='disabled')
+    password_entry.config(state='disabled')
+
+    def on_save_click():
+        # Obter o ID associado usando o rótulo selecionado
+        ID_TipoLogin = next(id for id, label in login_types if label == login_type_var.get())
+
+        loginService = LoginService()
+        result = loginService.salvarLogin(ID_TipoLogin, username_entry.get().strip(), password_entry.get().strip())
+        if (result > 0):
+            # messagebox.showinfo("Sucesso", "Login salvo com sucesso!")
+            # Exibir uma mensagem de alerta ao salvar com sucesso
+            alert_window = tk.Toplevel(root2)
+            alert_window.title("Sucesso")
+            tk.Label(alert_window, text="Os dados foram salvos com sucesso!").pack(padx=10, pady=10)
+
+            # Adiciona um botão "OK" para fechar a janela de alerta
+            ok_button = tk.Button(alert_window, text="OK", command=lambda: on_ok_button_click(alert_window))
+            ok_button.pack(pady=10)
+
+            # Limpa os campos de entrada
+            password_entry.delete(0, 'end')
+            username_entry.delete(0, 'end')
+
+    def validar_formulario():
+        tipo_login_selecionado = login_type_var.get()
+        username = username_entry.get()
+        password = password_entry.get()
+        msgErro = None
+
+
+
+        if tipo_login_selecionado == "SELECIONE UMA OPÇÃO":
+            msgErro = "Selecione um tipo de login"
+        elif not username:
+            msgErro = "Usuário não informado!"
+        elif not password:
+            msgErro = "Senha não informada!"
+        elif tipo_login_selecionado == "CPF" and len(username_entry.get()) < 11:
+            msgErro = "CPF incompleto, verifique!"
+        elif tipo_login_selecionado == "ID FUNCIONAL" and len(username_entry.get()) < 8:
+            msgErro = "ID FUNCIONAL incompleta, verifique!"
+
+        if msgErro:
+            alert_window = tk.Toplevel(root2)
+            alert_window.title("Erro")
+            tk.Label(alert_window, text=f"{msgErro}").pack(padx=10, pady=10)
+            # Adiciona um botão "OK" para fechar a janela de alerta
+            ok_button = tk.Button(alert_window, text="OK", command=lambda: on_ok_button_click(alert_window))
+            ok_button.pack(pady=10)
+        else:
+            on_save_click()
+
+
+
+    def validar_entrada(caracter, entry_type):
+        #return char != ' '  # Bloqueia o caractere de espaço
+        if entry_type == 'username':
+            # Se for password_entry, permita letras e números
+            return caracter.isdigit()
+        elif entry_type == 'password':
+            return caracter != ' '  # Bloqueia o caractere de espaço
+
+    def on_entry_change(event, entry_type):
+        entry_widget = event.widget
+        novo_texto = entry_widget.get()
+        novo_texto_sem_espacos = ''.join(filter(lambda c: validar_entrada(c, entry_type), novo_texto))
+        entry_widget.delete(0, 'end')
+        entry_widget.insert(0, novo_texto_sem_espacos)
+
+    def atualizar_max_length(*args):
+        # Obtém o tipo de login selecionado no OptionMenu
+        tipo_login_selecionado = login_type_var.get()
+
+        # Define o comprimento máximo com base no tipo de login selecionado
+        max_length = 0  # Defina o valor padrão ou ajuste conforme necessário
+        if tipo_login_selecionado == "CPF":
+            max_length = 11
+            username_entry.config(state='normal')
+            password_entry.config(state='normal')
+        elif tipo_login_selecionado == "ID FUNCIONAL":
+            max_length = 8
+            username_entry.config(state='normal')
+            password_entry.config(state='normal')
+        else:
+            username_entry.delete(0, 'end')
+            password_entry.delete(0, 'end')
+            username_entry.config(state='disabled')
+            password_entry.config(state='disabled')
+
+
+        username_entry.delete(0, 'end')
+        # Adapte conforme necessário para outros tipos de login
+
+
+        # Define o comprimento máximo no Entry correspondente
+        username_entry.config(validate='key',
+                              validatecommand=(username_entry.register(lambda P: len(P) <= max_length), '%P'))
+
+    # Associa a função on_entry_change ao evento de modificação do Entry
+    username_entry.bind('<KeyRelease>', lambda event: on_entry_change(event, 'username'))
+    password_entry.bind('<KeyRelease>', lambda event: on_entry_change(event, 'password'))
+
+    # Iniciar o loop da interface gráfica
+    root2.mainloop()
+
+
+
+def on_ok_button_click(alert_window):
+    # Destroi a janela de alerta
+    alert_window.destroy()
+
 if __name__ == "__main__":
     # acessarSite()
-    abrirJanela()
-
+    #abrirJanela()
+    abrirJanela2()
